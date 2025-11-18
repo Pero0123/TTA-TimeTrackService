@@ -7,6 +7,14 @@ from .models import entry_helper, project_helper
 from .configurations import db, entries_collection, projects_collection
 app = FastAPI(title="Time Tracker API")
 currentUser = "691c8bf8d691e46d00068bf3"
+
+#******************************entries endpoints****************************************
+#Get entry by id
+@app.get("/entry/{entry_id}", response_model=Entry)
+def get_entry_by_id(entry_id):
+    entry = entries_collection.find_one({"_id": ObjectId(entry_id)})
+    return entry
+
 #start a time entry using put
 @app.put("/entries/", response_model=Entry)
 def start_entry(entry: EntryStart):
@@ -78,6 +86,8 @@ def list_entries_from_project(project_id: str):
     entries = entries_collection.find({"project_group_id": ObjectId(project_id)})
 
     return [entry_helper(e) for e in entries]
+
+
 
 #********************project Managment*******************************
 @app.put("/projects/", response_model=Project)
