@@ -2,11 +2,11 @@ from fastapi import FastAPI, HTTPException
 from datetime import datetime
 from bson import ObjectId
 
-from .schemas import EntryStart, Entry
-from .models import entries_collection, entry_helper
-
+from .schemas import EntryStart, Entry, ProjectCreate, Project
+from .models import entry_helper, project_helper
+from .configurations import db, entries_collection, projects_collection
 app = FastAPI(title="Time Tracker API")
-
+currentUser = "691c8bf8d691e46d00068bf3"
 #start a time entry using put
 @app.put("/entries/", response_model=Entry)
 def start_entry(entry: EntryStart):
@@ -49,3 +49,28 @@ def end_entry(entry_id: str):
 def list_entries():
     entries = entries_collection.find()
     return [entry_helper(e) for e in entries]
+
+
+#********************project Managment*******************************
+@app.put("/projects/", response_model=Project)
+def create_project(project: ProjectCreate):
+    project_dict = {
+        "name": project.name,
+        "description": project.description,
+        "owner_id": ObjectId(currentUser)
+    }
+    result = projects_collection.insert_one(project_dict)
+    created_project = projects_collection.find_one({"_id": result.inserted_id})
+    return project_helper(created_project)
+
+# list all projects
+@app.get("/projects/", response_model=list[Project])
+def list_projects():
+    projects = projects_collection.find()
+    return [project_helper(p) for p in projects]
+
+#list projects belongin to the current user
+@app.get("/projects/user", response_model=list[Project])
+def list_users_projects():
+    projects = projects_collection.find({"owner_id": ObjectId(currentUser)})
+    return [project_helper(p) for p in projects]

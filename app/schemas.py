@@ -13,3 +13,16 @@ class Entry(BaseModel):
     duration: Optional[int] = None  #ime in seconds
 
 
+#*********************Project managment models*************************
+class ProjectCreate(BaseModel):
+    name: str = Field(..., example="Serial Link"),
+    description: str = Field(..., example="My main project"),
+
+class Project(BaseModel):
+    id: str
+    owner_id: str
+    name: str
+    description: str
+    
+class ProjectOfUser:
+    owner_id: str
