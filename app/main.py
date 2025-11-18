@@ -13,6 +13,7 @@ def start_entry(entry: EntryStart):
     now = datetime.now()
     entry_dict = {
         "name": entry.name,
+        "project_group_id": entry.project_group_id,
         "starttime": now,
         "endtime": None,
         "duration": None
@@ -74,3 +75,6 @@ def list_projects():
 def list_users_projects():
     projects = projects_collection.find({"owner_id": ObjectId(currentUser)})
     return [project_helper(p) for p in projects]
+
+
+# python -m uvicorn app.main:app --reload
