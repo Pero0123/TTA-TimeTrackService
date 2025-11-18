@@ -1,60 +1,51 @@
-from fastapi import FastAPI, APIRouter, HTTPException
+from fastapi import FastAPI, HTTPException
+from datetime import datetime
 from bson import ObjectId
-from .configurations import collection, entries
-from .schemas import all_users, serialize_entries, serialize_entry, User, Entry
 
-app = FastAPI()
-router = APIRouter()
+from .schemas import EntryStart, Entry
+from .models import entries_collection, entry_helper
 
+app = FastAPI(title="Time Tracker API")
 
-@app.get("/")
-def hello():
-    return {"message": "Hello, World!"}
+#start a time entry using put
+@app.put("/entries/", response_model=Entry)
+def start_entry(entry: EntryStart):
+    now = datetime.now()
+    entry_dict = {
+        "name": entry.name,
+        "starttime": now,
+        "endtime": None,
+        "duration": None
+    }
+    result = entries_collection.insert_one(entry_dict)
+    created_entry = entries_collection.find_one({"_id": result.inserted_id})
+    return entry_helper(created_entry)
 
-@router.get("/users")
-async def get_all_users():
-    try:
-        data = list(collection.find())
-        return all_users(data)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching users: {e}")
+#complete a time entry
+@app.patch("/entries/{entry_id}", response_model=Entry)
+def end_entry(entry_id: str):
+    entry = entries_collection.find_one({"_id": ObjectId(entry_id)})
+    
+    if not entry:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    
+    if entry.get("endtime") is not None:
+        raise HTTPException(status_code=400, detail="Entry already ended")
+    
+    now = datetime.now()
+    starttime = entry["starttime"]
+    duration_seconds = int((now - starttime).total_seconds())
+    
+    entries_collection.update_one(
+        {"_id": ObjectId(entry_id)},
+        {"$set": {"endtime": now, "duration": duration_seconds}}
+    )
+    
+    updated_entry = entries_collection.find_one({"_id": ObjectId(entry_id)})
+    return entry_helper(updated_entry)
 
-
-@router.post("/users")
-async def create_user(new_user: User):
-    try:
-        resp = collection.insert_one(new_user.dict())
-        return {"status_code": 200, "id": str(resp.inserted_id)}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error occurred: {e}")
-
-
-@router.get("/entries")
-async def get_all_entries():
-    try:
-        data = list(entries.find())
-        return serialize_entries(data)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching entries: {e}")
-
-
-@router.post("/entries")
-async def create_entry(new_entry: Entry):
-    try:
-        resp = entries.insert_one(new_entry.dict())
-        return {"status_code": 200, "id": str(resp.inserted_id)}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error occurred: {e}")
-
-
-@router.get("/entries/{entry_id}")
-async def get_entry(entry_id: str):
-    try:
-        entry = entries.find_one({"_id": ObjectId(entry_id)})
-        if not entry:
-            raise HTTPException(status_code=404, detail="Entry not found")
-        return serialize_entry(entry)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching entry: {e}")
-
-app.include_router(router)
+# List all entries
+@app.get("/entries/", response_model=list[Entry])
+def list_entries():
+    entries = entries_collection.find()
+    return [entry_helper(e) for e in entries]
