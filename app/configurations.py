@@ -8,4 +8,6 @@ uri = "mongodb+srv://User:Password@cluster0.82ogu5x.mongodb.net/?retryWrites=tru
 client = MongoClient(uri, server_api=ServerApi('1'))
 
 db = client.user_db
-collection = db["user_data"]
+collection = db["users"]
+projects = db["projects"]
+entries = db["entries"]
