@@ -68,13 +68,23 @@ def end_entry(entry_id: str):
 #update a time entry. Name and project it belongs to
 @app.patch("/entries/update/{entry_id}", response_model=dict)
 def update_entry(entry_id: str, updatedEntry: EntryUpdate):
+    # Find existing entry
     entry = entries_collection.find_one({"_id": ObjectId(entry_id)})
     if not entry:
         raise HTTPException(status_code=404, detail="Entry not found")
     
-    # prepare update data, only including et fields
+    # prepare update data, only include set fields
     update_data = {k: v for k, v in updatedEntry.dict(exclude_unset=True).items() if v is not None}
 
+    # test if the project exists
+    if "project_group_id" in update_data:
+        project_id = ObjectId(update_data["project_group_id"])
+        project = projects_collection.find_one({"_id": project_id})
+        if not project:
+            raise HTTPException(status_code=404, detail="Project does not exist")
+        update_data["project_group_id"] = project_id  # convert to ObjectId for mongodb
+
+    #update the entry
     if update_data:
         entries_collection.update_one(
             {"_id": ObjectId(entry_id)},
