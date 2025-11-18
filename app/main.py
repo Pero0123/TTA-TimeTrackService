@@ -18,6 +18,12 @@ def start_entry(entry: EntryStart):
         "endtime": None,
         "duration": None
     }
+
+    #check if the project exists
+    project = projects_collection.find_one({"_id": entry_dict["project_group_id"]})
+    if not project:
+        raise HTTPException(status_code=404, detail="Project does not exist")
+    
     result = entries_collection.insert_one(entry_dict)
     created_entry = entries_collection.find_one({"_id": result.inserted_id})
     return entry_helper(created_entry)
@@ -58,6 +64,10 @@ def list_entries_from_project(project_id: str):
     #validate ObjectId format
     if not ObjectId.is_valid(project_id):
         raise HTTPException(status_code=400, detail="Invalid project id")
+
+#check if the project exists
+    if not projects_collection.find_one({"_id": ObjectId(project_id)}):
+        raise HTTPException(status_code=404, detail="project does not exist")
 
     # check if project exists
     project = projects_collection.find_one({"_id": ObjectId(project_id)})
