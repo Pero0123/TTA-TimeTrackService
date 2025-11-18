@@ -11,9 +11,14 @@ currentUser = "691c8bf8d691e46d00068bf3"
 #******************************entries endpoints****************************************
 #Get entry by id
 @app.get("/entry/{entry_id}", response_model=Entry)
-def get_entry_by_id(entry_id):
+def get_entry_by_id(entry_id: str):
     entry = entries_collection.find_one({"_id": ObjectId(entry_id)})
-    return entry
+    return entry_helper(entry)
+
+@app.delete("/entry/{entry_id}")
+def delete_entry_by_id(entry_id: str):
+    entries_collection.delete_one({"_id": ObjectId(entry_id)})
+    return {"message": "Entry deleted"}
 
 #start a time entry using put
 @app.put("/entries/", response_model=Entry)
