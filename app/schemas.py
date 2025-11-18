@@ -20,13 +20,13 @@ class Entry(BaseModel):
     name: str
     starttime: datetime
     endtime: Optional[datetime] = None
-    duration: Optional[int] = None  #ime in seconds
+    duration: Optional[int] = None  # time in seconds
 
 
 #*********************Project managment models*************************
 class ProjectCreate(BaseModel):
     name: str = Field(..., example="Serial Link"),
-    description: str = Field(..., example="My main project"),
+    description: str = Field(..., example="My main project")
 
 class Project(BaseModel):
     id: MongoId

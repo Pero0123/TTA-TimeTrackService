@@ -13,7 +13,7 @@ def start_entry(entry: EntryStart):
     now = datetime.now()
     entry_dict = {
         "name": entry.name,
-        "project_group_id": entry.project_group_id,
+        "project_group_id": ObjectId(entry.project_group_id),
         "starttime": now,
         "endtime": None,
         "duration": None
@@ -51,6 +51,23 @@ def list_entries():
     entries = entries_collection.find()
     return [entry_helper(e) for e in entries]
 
+#list entries belongin to a project
+@app.get("/entries/project/{project_id}", response_model=list[Entry])
+def list_entries_from_project(project_id: str):
+
+    #validate ObjectId format
+    if not ObjectId.is_valid(project_id):
+        raise HTTPException(status_code=400, detail="Invalid project id")
+
+    # check if project exists
+    project = projects_collection.find_one({"_id": ObjectId(project_id)})
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    #fetch entries belonging to project
+    entries = entries_collection.find({"project_group_id": ObjectId(project_id)})
+
+    return [entry_helper(e) for e in entries]
 
 #********************project Managment*******************************
 @app.put("/projects/", response_model=Project)
