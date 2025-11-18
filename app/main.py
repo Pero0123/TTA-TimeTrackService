@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException
 from datetime import datetime
 from bson import ObjectId
 
-from .schemas import EntryStart, Entry, ProjectCreate, Project
+from .schemas import EntryStart, Entry, ProjectCreate, Project, EntryUpdate
 from .models import entry_helper, project_helper
 from .configurations import db, entries_collection, projects_collection
 app = FastAPI(title="Time Tracker API")
@@ -15,6 +15,7 @@ def get_entry_by_id(entry_id: str):
     entry = entries_collection.find_one({"_id": ObjectId(entry_id)})
     return entry_helper(entry)
 
+#delete by id
 @app.delete("/entry/{entry_id}")
 def delete_entry_by_id(entry_id: str):
     entries_collection.delete_one({"_id": ObjectId(entry_id)})
@@ -61,6 +62,25 @@ def end_entry(entry_id: str):
         {"$set": {"endtime": now, "duration": duration_seconds}}
     )
     
+    updated_entry = entries_collection.find_one({"_id": ObjectId(entry_id)})
+    return entry_helper(updated_entry)
+
+#update a time entry. Name and project it belongs to
+@app.patch("/entries/update/{entry_id}", response_model=dict)
+def update_entry(entry_id: str, updatedEntry: EntryUpdate):
+    entry = entries_collection.find_one({"_id": ObjectId(entry_id)})
+    if not entry:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    
+    # prepare update data, only including et fields
+    update_data = {k: v for k, v in updatedEntry.dict(exclude_unset=True).items() if v is not None}
+
+    if update_data:
+        entries_collection.update_one(
+            {"_id": ObjectId(entry_id)},
+            {"$set": update_data}
+        )
+
     updated_entry = entries_collection.find_one({"_id": ObjectId(entry_id)})
     return entry_helper(updated_entry)
 
