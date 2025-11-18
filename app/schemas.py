@@ -1,20 +1,15 @@
-# app/schemas.py
-from pydantic import BaseModel, EmailStr, constr, conint
+from pydantic import BaseModel, Field
+from typing import Optional
+from datetime import datetime
 
-class User(BaseModel):
-    user_id:int
-    user_name:str
-    password:str
+class EntryStart(BaseModel):
+    name: str = Field(..., example="Work on project")
 
-
-def individual_data(user):
-    return{
-        "id": str(user["_id"]),
-        "user_id": user["user_id"],
-        "user_name": user["user_name"],
-        "password": user["password"]
-    }
+class Entry(BaseModel):
+    id: str
+    name: str
+    starttime: datetime
+    endtime: Optional[datetime] = None
+    duration: Optional[int] = None  #ime in seconds
 
 
-def all_users(users):
-    return [individual_data(user) for user in users]

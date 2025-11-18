@@ -1,31 +1,51 @@
-from fastapi import FastAPI, APIRouter, HTTPException
-from .configurations import collection
-from .schemas import all_users, User
-import uvicorn
+from fastapi import FastAPI, HTTPException
+from datetime import datetime
+from bson import ObjectId
 
-app = FastAPI()
-router = APIRouter()
+from .schemas import EntryStart, Entry
+from .models import entries_collection, entry_helper
 
-@app.get("/")
-def hello():
-    return {"message": "Hello, World!"}
+app = FastAPI(title="Time Tracker API")
 
-@router.get("/users")
-async def get_all_users():
-    try:
-        data = list(collection.find())
-        return all_users(data)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching users: {e}")
+#start a time entry using put
+@app.put("/entries/", response_model=Entry)
+def start_entry(entry: EntryStart):
+    now = datetime.now()
+    entry_dict = {
+        "name": entry.name,
+        "starttime": now,
+        "endtime": None,
+        "duration": None
+    }
+    result = entries_collection.insert_one(entry_dict)
+    created_entry = entries_collection.find_one({"_id": result.inserted_id})
+    return entry_helper(created_entry)
 
-@router.post("/users")
-async def create_user(new_user: User):
-    try:
-        resp = collection.insert_one(dict(new_user))
-        return {"status_code": 200, "id": str(resp.inserted_id)}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error occurred: {e}")
+#complete a time entry
+@app.patch("/entries/{entry_id}", response_model=Entry)
+def end_entry(entry_id: str):
+    entry = entries_collection.find_one({"_id": ObjectId(entry_id)})
+    
+    if not entry:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    
+    if entry.get("endtime") is not None:
+        raise HTTPException(status_code=400, detail="Entry already ended")
+    
+    now = datetime.now()
+    starttime = entry["starttime"]
+    duration_seconds = int((now - starttime).total_seconds())
+    
+    entries_collection.update_one(
+        {"_id": ObjectId(entry_id)},
+        {"$set": {"endtime": now, "duration": duration_seconds}}
+    )
+    
+    updated_entry = entries_collection.find_one({"_id": ObjectId(entry_id)})
+    return entry_helper(updated_entry)
 
-app.include_router(router)
-
-
+# List all entries
+@app.get("/entries/", response_model=list[Entry])
+def list_entries():
+    entries = entries_collection.find()
+    return [entry_helper(e) for e in entries]
