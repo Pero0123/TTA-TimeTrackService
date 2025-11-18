@@ -15,6 +15,11 @@ def get_entry_by_id(entry_id: str):
     entry = entries_collection.find_one({"_id": ObjectId(entry_id)})
     return entry_helper(entry)
 
+@app.delete("/entry/{entry_id}")
+def delete_entry_by_id(entry_id: str):
+    entries_collection.delete_one({"_id": ObjectId(entry_id)})
+    return {"message": "Entry deleted"}
+
 #start a time entry using put
 @app.put("/entries/", response_model=Entry)
 def start_entry(entry: EntryStart):
