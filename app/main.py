@@ -148,5 +148,41 @@ def list_users_projects():
     projects = projects_collection.find({"owner_id": ObjectId(currentUser)})
     return [project_helper(p) for p in projects]
 
+#delete a project and all its entries
+@app.delete("/project/{project_id}")
+def delete_project_and_entries(project_id: str):
+    if(delete_project_and_entries_helper(project_id)):
+       return {"status": "success", "message": "Project and all its entries deleted"} 
+    
+
+@app.delete("/user/projects")
+def delete_users_projects():
+
+#list projects belongin to the current user
+    projects = projects_collection.find({"owner_id": ObjectId(currentUser)})
+    for p in projects:
+        delete_project_and_entries_helper(str(p["_id"]))
+
+    return {"status": "success", "message": "Users projects are deleted"}
+    
+
+##helper function to delete a project and all its entries
+def delete_project_and_entries_helper(project_id: str):
+        #validate ObjectId format
+    if not ObjectId.is_valid(project_id):
+        raise HTTPException(status_code=400, detail="Invalid project id")
+
+    #check if the project exists
+    if not projects_collection.find_one({"_id": ObjectId(project_id)}):
+        raise HTTPException(status_code=404, detail="project does not exist")
+
+    #delete all entries belonging to the project
+    entries_collection.delete_many({"project_group_id": ObjectId(project_id)})
+
+    #delete the project
+    projects_collection.delete_one({"_id": ObjectId(project_id)})
+
+    return 1
+
 
 # python -m uvicorn app.main:app --reload
