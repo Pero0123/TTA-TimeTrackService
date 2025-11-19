@@ -15,6 +15,10 @@ class EntryStart(BaseModel):
     name: str = Field(..., example="Work on project")
     project_group_id: MongoId
 
+class EntryUpdate(BaseModel):
+    name: Optional[str] = Field(..., example="Work on project")
+    project_group_id: Optional[MongoId] =Field(None, example="691cc7113ddac7733853998b")
+
 class Entry(BaseModel):
     id: MongoId
     project_group_id: MongoId
