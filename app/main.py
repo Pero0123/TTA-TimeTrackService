@@ -10,19 +10,28 @@ currentUser = "691c8bf8d691e46d00068bf3"
 
 #******************************entries endpoints****************************************
 #Get entry by id
-@app.get("/entry/{entry_id}", response_model=Entry)
+@app.get("/entry/{entry_id}", response_model=Entry, status_code=200)
 def get_entry_by_id(entry_id: str):
+
+    #validate ObjectId format
+    if not ObjectId.is_valid(entry_id):
+        raise HTTPException(status_code=400, detail="Invalid entry id")
+
     entry = entries_collection.find_one({"_id": ObjectId(entry_id)})
+    if not entry:
+        raise HTTPException(status_code=404, detail="Entry not found")
+
     return entry_helper(entry)
 
+
 #delete by id
-@app.delete("/entry/{entry_id}")
+@app.delete("/entry/{entry_id}",status_code=200)
 def delete_entry_by_id(entry_id: str):
     entries_collection.delete_one({"_id": ObjectId(entry_id)})
     return {"message": "Entry deleted"}
 
 #start a time entry using put
-@app.put("/entries/", response_model=Entry)
+@app.put("/entries/", response_model=Entry,status_code=201)
 def start_entry(entry: EntryStart):
     now = datetime.now()
     entry_dict = {
@@ -43,7 +52,7 @@ def start_entry(entry: EntryStart):
     return entry_helper(created_entry)
 
 #complete a time entry
-@app.patch("/entries/{entry_id}", response_model=Entry)
+@app.patch("/entries/{entry_id}", response_model=Entry, status_code=200)
 def end_entry(entry_id: str):
     entry = entries_collection.find_one({"_id": ObjectId(entry_id)})
     
@@ -66,7 +75,7 @@ def end_entry(entry_id: str):
     return entry_helper(updated_entry)
 
 #update a time entry. Name and project it belongs to
-@app.patch("/entries/update/{entry_id}", response_model=dict)
+@app.patch("/entries/update/{entry_id}", response_model=dict, status_code=200)
 def update_entry(entry_id: str, updatedEntry: EntryUpdate):
     # Find existing entry
     entry = entries_collection.find_one({"_id": ObjectId(entry_id)})
@@ -95,13 +104,13 @@ def update_entry(entry_id: str, updatedEntry: EntryUpdate):
     return entry_helper(updated_entry)
 
 # List all entries
-@app.get("/entries/", response_model=list[Entry])
+@app.get("/entries/", response_model=list[Entry], status_code=200)
 def list_entries():
     entries = entries_collection.find()
     return [entry_helper(e) for e in entries]
 
 #list entries belongin to a project
-@app.get("/entries/project/{project_id}", response_model=list[Entry])
+@app.get("/entries/project/{project_id}", response_model=list[Entry],status_code=200)
 def list_entries_from_project(project_id: str):
 
     #validate ObjectId format
@@ -125,7 +134,7 @@ def list_entries_from_project(project_id: str):
 
 
 #********************project Managment*******************************
-@app.put("/projects/", response_model=Project)
+@app.put("/projects/", response_model=Project,status_code=201)
 def create_project(project: ProjectCreate):
     project_dict = {
         "name": project.name,
@@ -137,25 +146,25 @@ def create_project(project: ProjectCreate):
     return project_helper(created_project)
 
 # list all projects
-@app.get("/projects/", response_model=list[Project])
+@app.get("/projects/", response_model=list[Project],status_code=200)
 def list_projects():
     projects = projects_collection.find()
     return [project_helper(p) for p in projects]
 
 #list projects belongin to the current user
-@app.get("/projects/user", response_model=list[Project])
+@app.get("/projects/user", response_model=list[Project],status_code=200)
 def list_users_projects():
     projects = projects_collection.find({"owner_id": ObjectId(currentUser)})
     return [project_helper(p) for p in projects]
 
 #delete a project and all its entries
-@app.delete("/project/{project_id}")
+@app.delete("/project/{project_id}",status_code=200)
 def delete_project_and_entries(project_id: str):
     if(delete_project_and_entries_helper(project_id)):
        return {"status": "success", "message": "Project and all its entries deleted"} 
     
 
-@app.delete("/user/projects")
+@app.delete("/user/projects",status_code=200)
 def delete_users_projects():
 
 #list projects belongin to the current user
